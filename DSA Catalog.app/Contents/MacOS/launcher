@@ -1,0 +1,51 @@
+#!/bin/bash
+# Launcher for DSA Catalog.app
+#
+# macOS TCC blocks .app child processes from reading files in ~/Documents
+# (iCloud Drive). Since this project lives in ~/Documents, the launcher
+# delegates to Terminal.app via `open`, which has Full Disk Access.
+# LSUIElement=true in Info.plist keeps this app out of the Dock entirely.
+
+LOG="$HOME/Library/Logs/DSA-Catalog.log"
+mkdir -p "$(dirname "$LOG")"
+
+exec >> "$LOG" 2>&1
+
+echo
+echo "=================================================="
+echo "Launch attempt: $(date)"
+
+APP_PATH="$(cd "$(dirname "$0")/../.." && pwd)"
+PARENT="$(dirname "$APP_PATH")"
+echo "App lives at: $APP_PATH"
+echo "Working dir : $PARENT"
+
+if [ ! -f "$PARENT/serve.py" ]; then
+    echo "ERROR: serve.py not found in $PARENT"
+    osascript -e "display alert \"serve.py not found\" message \"Expected it next to DSA Catalog.app in $PARENT.\""
+    exit 1
+fi
+
+# If the server is already running, just open the browser
+if lsof -ti :8765 >/dev/null 2>&1; then
+    echo "Server already running on port 8765"
+    open "http://localhost:8765/"
+    exit 0
+fi
+
+echo "Launching start.command via Terminal.app"
+open -a Terminal "$PARENT/start.command"
+
+# Wait for server to start
+for i in 1 2 3 4 5 6; do
+    sleep 1
+    if lsof -ti :8765 >/dev/null 2>&1; then
+        echo "Server is listening on port 8765"
+        open "http://localhost:8765/"
+        exit 0
+    fi
+done
+
+echo "ERROR: server did not start within 6 seconds"
+osascript -e 'display alert "DSA Catalog failed to start" message "The server did not start. Check ~/Library/Logs/DSA-Catalog.log for details."'
+exit 1
