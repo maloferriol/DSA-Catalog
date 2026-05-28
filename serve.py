@@ -27,6 +27,7 @@ from pathlib import Path
 
 PORT = 8765
 HERE = Path(__file__).parent.resolve()
+LEARN_DIR = HERE / "docs-site" / "build"
 PROGRESS_FILE = HERE / "progress.json"
 DEFAULT_PAGE = "DSA_Reference_Catalog.html"
 
@@ -47,7 +48,36 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.path = "/" + DEFAULT_PAGE
         if self.path == "/progress.json":
             return self._serve_progress()
+        if self.path.startswith("/learn/") or self.path == "/learn":
+            return self._serve_learn()
         return super().do_GET()
+
+    def _serve_learn(self):
+        rel = self.path[len("/learn"):]
+        if not rel or rel == "/":
+            rel = "/index.html"
+        local_path = LEARN_DIR / rel.lstrip("/")
+        if local_path.is_dir():
+            local_path = local_path / "index.html"
+        if not local_path.exists():
+            local_path = LEARN_DIR / "404.html"
+            if not local_path.exists():
+                self.send_error(404)
+                return
+        content = local_path.read_bytes()
+        self.send_response(200)
+        ext = local_path.suffix.lower()
+        ct = {
+            ".html": "text/html", ".css": "text/css",
+            ".js": "application/javascript", ".json": "application/json",
+            ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml",
+            ".woff2": "font/woff2", ".woff": "font/woff",
+            ".ico": "image/x-icon", ".txt": "text/plain",
+        }.get(ext, "application/octet-stream")
+        self.send_header("Content-Type", ct)
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
 
     def do_POST(self):
         if self.path == "/progress.json":

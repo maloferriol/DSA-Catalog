@@ -12,7 +12,7 @@ const config: Config = {
   },
 
   url: "https://maloferriol.github.io",
-  baseUrl: "/DSA-Catalog/",
+  baseUrl: "/learn/",
 
   organizationName: "maloferriol",
   projectName: "DSA-Catalog",
@@ -50,10 +50,16 @@ const config: Config = {
       title: "DSA Reference",
       items: [
         {
+          href: "/",
+          label: "Exercises",
+          position: "left",
+          target: "_self",
+        },
+        {
           type: "docSidebar",
           sidebarId: "tutorialSidebar",
           position: "left",
-          label: "Catalog",
+          label: "Learn",
         },
         {
           href: "https://github.com/maloferriol/DSA-Catalog",
