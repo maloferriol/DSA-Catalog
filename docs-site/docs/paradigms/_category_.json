@@ -1,0 +1,8 @@
+{
+  "label": "Paradigms",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "High-level approaches and strategies for algorithm design."
+  }
+}

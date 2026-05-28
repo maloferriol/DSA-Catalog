@@ -2,9 +2,9 @@
 # Launcher for DSA Catalog.app
 #
 # macOS TCC blocks .app child processes from reading files in ~/Documents
-# (iCloud Drive). Since this project lives in ~/Documents, the launcher
-# delegates to Terminal.app via `open`, which has Full Disk Access.
-# LSUIElement=true in Info.plist keeps this app out of the Dock entirely.
+# (iCloud Drive). We work around this by writing a temp script to /tmp
+# (not TCC-protected) and opening it in Terminal.app.
+# LSUIElement=true in Info.plist keeps this app out of the Dock.
 
 LOG="$HOME/Library/Logs/DSA-Catalog.log"
 mkdir -p "$(dirname "$LOG")"
@@ -33,11 +33,19 @@ if lsof -ti :8765 >/dev/null 2>&1; then
     exit 0
 fi
 
-echo "Launching start.command via Terminal.app"
-open -a Terminal "$PARENT/start.command"
+# Write a temp launcher to /tmp (not TCC-protected) so Terminal can run it
+TMPSCRIPT="/tmp/dsa-catalog-launch.command"
+cat > "$TMPSCRIPT" << SCRIPT
+#!/bin/bash
+cd '$PARENT' && exec python3 serve.py
+SCRIPT
+chmod +x "$TMPSCRIPT"
+
+echo "Launching via $TMPSCRIPT in Terminal.app"
+open -a Terminal "$TMPSCRIPT"
 
 # Wait for server to start
-for i in 1 2 3 4 5 6; do
+for i in 1 2 3 4 5 6 7 8; do
     sleep 1
     if lsof -ti :8765 >/dev/null 2>&1; then
         echo "Server is listening on port 8765"
@@ -46,6 +54,6 @@ for i in 1 2 3 4 5 6; do
     fi
 done
 
-echo "ERROR: server did not start within 6 seconds"
+echo "ERROR: server did not start within 8 seconds"
 osascript -e 'display alert "DSA Catalog failed to start" message "The server did not start. Check ~/Library/Logs/DSA-Catalog.log for details."'
 exit 1
