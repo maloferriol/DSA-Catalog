@@ -4,7 +4,9 @@
 # macOS TCC blocks .app child processes from reading files in ~/Documents
 # (iCloud Drive). We work around this by writing a temp script to /tmp
 # (not TCC-protected) and opening it in Terminal.app.
-# LSUIElement=true in Info.plist keeps this app out of the Dock.
+#
+# This launcher stays alive as long as the server is running so that macOS
+# shows the Dock icon dot and the bounce animation on launch.
 
 LOG="$HOME/Library/Logs/DSA-Catalog.log"
 mkdir -p "$(dirname "$LOG")"
@@ -30,30 +32,43 @@ fi
 if lsof -ti :8765 >/dev/null 2>&1; then
     echo "Server already running on port 8765"
     open "http://localhost:8765/"
-    exit 0
-fi
-
-# Write a temp launcher to /tmp (not TCC-protected) so Terminal can run it
-TMPSCRIPT="/tmp/dsa-catalog-launch.command"
-cat > "$TMPSCRIPT" << SCRIPT
+else
+    # Write a temp launcher to /tmp (not TCC-protected) so Terminal can run it
+    TMPSCRIPT="/tmp/dsa-catalog-launch.command"
+    cat > "$TMPSCRIPT" << SCRIPT
 #!/bin/bash
 cd '$PARENT' && exec python3 serve.py
 SCRIPT
-chmod +x "$TMPSCRIPT"
+    chmod +x "$TMPSCRIPT"
 
-echo "Launching via $TMPSCRIPT in Terminal.app"
-open -a Terminal "$TMPSCRIPT"
+    echo "Launching via $TMPSCRIPT in Terminal.app"
+    open -a Terminal "$TMPSCRIPT"
 
-# Wait for server to start
-for i in 1 2 3 4 5 6 7 8; do
-    sleep 1
-    if lsof -ti :8765 >/dev/null 2>&1; then
-        echo "Server is listening on port 8765"
-        open "http://localhost:8765/"
-        exit 0
+    # Wait for server to start
+    SERVER_STARTED=false
+    for i in 1 2 3 4 5 6 7 8; do
+        sleep 1
+        if lsof -ti :8765 >/dev/null 2>&1; then
+            echo "Server is listening on port 8765"
+            open "http://localhost:8765/"
+            SERVER_STARTED=true
+            break
+        fi
+    done
+
+    if [ "$SERVER_STARTED" = false ]; then
+        echo "ERROR: server did not start within 8 seconds"
+        osascript -e 'display alert "DSA Catalog failed to start" message "The server did not start. Check ~/Library/Logs/DSA-Catalog.log for details."'
+        exit 1
     fi
+fi
+
+# Stay alive while the server is running.
+# This keeps the .app process present so macOS shows the Dock dot.
+echo "Monitoring server on port 8765 (PID $$)"
+while lsof -ti :8765 >/dev/null 2>&1; do
+    sleep 5
 done
 
-echo "ERROR: server did not start within 8 seconds"
-osascript -e 'display alert "DSA Catalog failed to start" message "The server did not start. Check ~/Library/Logs/DSA-Catalog.log for details."'
-exit 1
+echo "Server stopped — launcher exiting at $(date)"
+exit 0
