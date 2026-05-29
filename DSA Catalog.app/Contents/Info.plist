@@ -25,7 +25,7 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>LSUIElement</key>
-    <true/>
+    <false/>
     <key>NSDocumentsFolderUsageDescription</key>
     <string>DSA Catalog needs access to your Documents folder to serve the catalog page and save your progress.</string>
 </dict>
