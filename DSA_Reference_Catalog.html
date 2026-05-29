@@ -8334,6 +8334,23 @@
   `;
       }
 
+      // ---- Pre-compute search index ----
+      DATA.forEach((d) => {
+        d._hay = (
+          d.name +
+          " " +
+          d.category +
+          " " +
+          d.definition +
+          " " +
+          d.techniques +
+          " " +
+          d.notes +
+          " " +
+          d.leetcode.map((p) => p.title).join(" ")
+        ).toLowerCase();
+      });
+
       // ---- Filtering ----
       function filtered() {
         const q = document.getElementById("search").value.toLowerCase().trim();
@@ -8350,22 +8367,7 @@
           if (sp === "No" && d.sean_prashad) return false;
           if (gr === "Yes" && !d.grind75) return false;
           if (gr === "No" && d.grind75) return false;
-          if (q) {
-            const hay = (
-              d.name +
-              " " +
-              d.category +
-              " " +
-              d.definition +
-              " " +
-              d.techniques +
-              " " +
-              d.notes +
-              " " +
-              d.leetcode.map((p) => p.title).join(" ")
-            ).toLowerCase();
-            if (!hay.includes(q)) return false;
-          }
+          if (q && !d._hay.includes(q)) return false;
           if (pf) {
             const pr = entryProgress(d);
             if (pf === "not-started" && pr.done > 0) return false;
@@ -8687,11 +8689,17 @@
       });
 
       // ---- Filter wiring ----
-      ["search", "kind", "category", "sp", "gr", "prog", "curated"].forEach(
-        (id) => {
-          document.getElementById(id).addEventListener("input", renderList);
-        },
-      );
+      let _searchTimer = null;
+      function debouncedRender() {
+        clearTimeout(_searchTimer);
+        _searchTimer = setTimeout(renderList, 120);
+      }
+      document
+        .getElementById("search")
+        .addEventListener("input", debouncedRender);
+      ["kind", "category", "sp", "gr", "prog", "curated"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", renderList);
+      });
       document.getElementById("reset").addEventListener("click", () => {
         ["search", "kind", "category", "sp", "gr", "prog", "curated"].forEach(
           (id) => (document.getElementById(id).value = ""),
