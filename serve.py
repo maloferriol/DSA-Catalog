@@ -306,6 +306,7 @@ def main():
         PROGRESS_FILE.write_text("{}\n")
         print(f"Created {PROGRESS_FILE.name}")
     docs_count = len(list(DOCS_DIR.rglob("*.md"))) if DOCS_DIR.exists() else 0
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("127.0.0.1", PORT), Handler) as srv:
         url = f"http://localhost:{PORT}/"
         print(f"\nDSA Reference Catalog → {url}")
