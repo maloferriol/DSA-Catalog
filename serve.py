@@ -43,7 +43,7 @@ LEARN_TEMPLATE = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title} — DSA Reference</title>
 <link rel="icon" type="image/png" href="/favicon.png">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<link rel="stylesheet" href="/static/css/github.min.css">
 <style>
 * {{ box-sizing: border-box; }}
 body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f7f7f8; color: #24292f; }}
@@ -86,9 +86,9 @@ body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", R
   <aside class="sidebar" id="sidebar">{sidebar}</aside>
   <main class="content" id="content">{content}</main>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="/static/js/marked.min.js"></script>
+<script src="/static/js/highlight.min.js"></script>
+<script src="/static/js/highlight-python.min.js"></script>
 <script>hljs.highlightAll();</script>
 </body>
 </html>"""
