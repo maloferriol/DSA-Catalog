@@ -21,7 +21,6 @@ Stop with Ctrl-C.
 """
 import http.server
 import json
-import os
 import re
 import socketserver
 import threading
@@ -35,9 +34,7 @@ DOCS_DIR = HERE / "docs-site" / "docs"
 PROGRESS_FILE = HERE / "progress.json"
 DEFAULT_PAGE = "DSA_Reference_Catalog.html"
 
-_sidebar_cache = {}
 _title_cache = {}
-_page_cache = {}  # cleared on server restart
 
 LEARN_TEMPLATE = """<!doctype html>
 <html lang="en">
@@ -47,8 +44,6 @@ LEARN_TEMPLATE = """<!doctype html>
 <title>{title} — DSA Reference</title>
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
-<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" as="script">
-<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" as="script">
 <style>
 * {{ box-sizing: border-box; }}
 body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f7f7f8; color: #24292f; }}
@@ -99,12 +94,9 @@ body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", R
 </html>"""
 
 
-def _build_sidebar_links():
-    if "links" in _sidebar_cache:
-        return _sidebar_cache["links"]
+def build_sidebar(current_path=""):
     if not DOCS_DIR.exists():
-        _sidebar_cache["links"] = []
-        return []
+        return "<p>No docs found</p>"
     SECTION_ORDER = ["data-structures", "algorithms", "paradigms", "techniques"]
     SECTION_LABELS = {
         "data-structures": "Data Structures",
@@ -112,36 +104,21 @@ def _build_sidebar_links():
         "paradigms": "Paradigms",
         "techniques": "Techniques",
     }
-    links = []
+    html_parts = []
     for section in SECTION_ORDER:
         section_dir = DOCS_DIR / section
         if not section_dir.is_dir():
             continue
-        links.append(("heading", SECTION_LABELS.get(section, section)))
+        html_parts.append(f'<h3>{SECTION_LABELS.get(section, section)}</h3>')
         for cat_dir in sorted(section_dir.iterdir()):
             if not cat_dir.is_dir():
                 continue
             for md_file in sorted(cat_dir.glob("*.md")):
                 title = extract_title(md_file)
                 url = f"/learn/{section}/{cat_dir.name}/{md_file.stem}"
-                links.append(("link", title, url))
-    _sidebar_cache["links"] = links
-    return links
-
-
-def build_sidebar(current_path=""):
-    links = _build_sidebar_links()
-    if not links:
-        return "<p>No docs found</p>"
-    parts = []
-    for item in links:
-        if item[0] == "heading":
-            parts.append(f'<h3>{item[1]}</h3>')
-        else:
-            _, title, url = item
-            active = " active" if url == current_path else ""
-            parts.append(f'<a href="{url}" class="{active}">{title}</a>')
-    return "\n".join(parts)
+                active = " active" if url == current_path else ""
+                html_parts.append(f'<a href="{url}" class="{active}">{title}</a>')
+    return "\n".join(html_parts)
 
 
 def extract_title(md_path):
@@ -196,9 +173,6 @@ def escape_html(s):
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-STATIC_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".css", ".js", ".woff", ".woff2"}
-
-
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(HERE), **kwargs)
@@ -207,13 +181,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         first = str(args[0]) if args else ""
         if "/progress.json" in first:
             super().log_message(fmt, *args)
-
-    def end_headers(self):
-        path_lower = self.path.split("?")[0].lower()
-        ext = os.path.splitext(path_lower)[1]
-        if ext in STATIC_EXTENSIONS:
-            self.send_header("Cache-Control", "public, max-age=86400")
-        super().end_headers()
 
     def do_GET(self):
         if self.path.rstrip("/") in ("", "/"):
@@ -246,13 +213,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     md_path = d
                     break
         if md_path.exists() and md_path.is_file():
-            cache_key = str(md_path)
-            if cache_key not in _page_cache:
-                md_text = md_path.read_text(errors="replace")
-                title = extract_title(md_path)
-                content = render_markdown_to_html(md_text)
-                _page_cache[cache_key] = (title, content)
-            title, content = _page_cache[cache_key]
+            md_text = md_path.read_text(errors="replace")
+            title = extract_title(md_path)
+            content = render_markdown_to_html(md_text)
             sidebar = build_sidebar(path)
             html = LEARN_TEMPLATE.format(title=title, sidebar=sidebar, content=content)
             body = html.encode("utf-8")
@@ -343,7 +306,7 @@ def main():
         PROGRESS_FILE.write_text("{}\n")
         print(f"Created {PROGRESS_FILE.name}")
     docs_count = len(list(DOCS_DIR.rglob("*.md"))) if DOCS_DIR.exists() else 0
-    with http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler) as srv:
+    with socketserver.TCPServer(("127.0.0.1", PORT), Handler) as srv:
         url = f"http://localhost:{PORT}/"
         print(f"\nDSA Reference Catalog → {url}")
         print(f"Learn pages: {docs_count} topics at {url}learn/")
