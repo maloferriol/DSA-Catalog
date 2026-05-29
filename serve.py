@@ -154,9 +154,9 @@ def render_markdown_to_html(md_text):
 <script>
 const renderer = new marked.Renderer();
 const origLink = renderer.link.bind(renderer);
-renderer.link = function(token) {
-  const html = origLink(token);
-  if (token.href && !token.href.startsWith('/')) {
+renderer.link = function(href, title, text) {
+  const html = origLink(href, title, text);
+  if (href && !href.startsWith('/')) {
     return html.replace('<a ', '<a target="_blank" rel="noopener" ');
   }
   return html;
