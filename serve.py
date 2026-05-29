@@ -82,14 +82,13 @@ body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", R
   <a href="/">Exercises</a>
   <a href="/learn/" class="active">Learn</a>
 </nav>
+<script src="/static/js/marked.min.js"></script>
+<script src="/static/js/highlight.min.js"></script>
+<script src="/static/js/highlight-python.min.js"></script>
 <div class="layout">
   <aside class="sidebar" id="sidebar">{sidebar}</aside>
   <main class="content" id="content">{content}</main>
 </div>
-<script src="/static/js/marked.min.js"></script>
-<script src="/static/js/highlight.min.js"></script>
-<script src="/static/js/highlight-python.min.js"></script>
-<script>hljs.highlightAll();</script>
 </body>
 </html>"""
 
